@@ -921,32 +921,47 @@ function renderGame() {
   renderPlayerPanels();
 }
 
-function buildRoundSummaryGroup(label, type, count) {
-  const cardsHtml = count > 0
-    ? Array.from({ length: count }, () => `
-        <span class="round-summary-card">
-          <img src="${getCardImagePath(type)}" alt="${escapeHtml(label)}" />
-        </span>
-      `).join("")
-    : `<span class="round-summary-empty">Brak ${escapeHtml(label)}.</span>`;
-
-  return `
-    <section class="round-summary-group">
-      <div class="round-summary-group-head">
-        <strong>${escapeHtml(capitalizeFirst(label))}</strong>
-        <span>${escapeHtml(formatRoundSummaryLabel(count, type))}</span>
-      </div>
-      <div class="round-summary-strip">${cardsHtml}</div>
-    </section>
-  `;
+function getOwnedCards(playerId) {
+  const cards = Array.isArray(state.room?.cards) ? state.room.cards : [];
+  return cards.filter((card) => card.ownerId === playerId && !card.removed);
 }
 
-function buildRoundSummaryGroups(summary) {
-  return [
-    buildRoundSummaryGroup("złoto", "treasure", summary.treasure),
-    buildRoundSummaryGroup("pułapki", "trap", summary.trap),
-    buildRoundSummaryGroup("puste", "empty", summary.empty),
-  ].join("");
+function sortCardsForSummary(cards) {
+  const rank = { treasure: 0, trap: 1, empty: 2 };
+  return [...cards].sort((left, right) => {
+    const rankDelta = (rank[left.type] || 3) - (rank[right.type] || 3);
+    if (rankDelta !== 0) {
+      return rankDelta;
+    }
+
+    return (left.id || 0) - (right.id || 0);
+  });
+}
+
+function buildCardStrip(cards) {
+  const sortedCards = sortCardsForSummary(cards);
+
+  if (sortedCards.length === 0) {
+    return `<div class="round-summary-empty">Brak kart.</div>`;
+  }
+
+  return sortedCards
+    .map((card) => `
+      <div class="card round-summary-card">
+        <img class="card-image round-summary-thumb" src="${getCardImagePath(card.type)}" alt="${escapeHtml(cardTypeLabel(card.type))}" />
+      </div>
+    `)
+    .join("");
+}
+
+function buildOwnedCardModalContent(playerId) {
+  const cards = getOwnedCards(playerId);
+  const summary = getCardSummary(cards);
+
+  return {
+    summary,
+    stripHtml: `<div class="round-summary-strip round-summary-strip-inline">${buildCardStrip(cards)}</div>`,
+  };
 }
 
 function renderRoundModal() {
@@ -968,9 +983,9 @@ function renderRoundModal() {
     return;
   }
 
-  const summary = getRoundRoomSummary(room.cards);
-  els.roundModalText.textContent = `Masz ${formatRoundSummaryPhrase(summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(summary.trap, "trap")} i ${formatRoundSummaryPhrase(summary.empty, "empty")}.`;
-  els.roundModalVisual.innerHTML = buildRoundSummaryGroups(summary);
+  const content = buildOwnedCardModalContent(state.user.uid);
+  els.roundModalText.textContent = `Początek rundy ${roundNumber}. Masz ${formatRoundSummaryPhrase(content.summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(content.summary.trap, "trap")} i ${formatRoundSummaryPhrase(content.summary.empty, "empty")}.`;
+  els.roundModalVisual.innerHTML = content.stripHtml;
   els.roundModal.classList.remove("hidden");
 }
 
@@ -988,11 +1003,6 @@ function getRoundAckKey(roundNumber) {
 
   const token = state.room.gameToken != null ? String(state.room.gameToken) : "unknown";
   return `gva_round_ack_${state.roomId}_${token}_${roundNumber}`;
-}
-
-function getRoundRoomSummary(cards) {
-  const remainingCards = Array.isArray(cards) ? cards.filter((card) => !card.removed) : [];
-  return getCardSummary(remainingCards);
 }
 
 function formatRoundSummaryLabel(count, type) {
@@ -1886,7 +1896,7 @@ function renderRoleModal() {
     ? "Drużyny zostały wylosowane ponownie."
     : "";
   const isFirstRound = state.room.round === 1;
-  const summary = isFirstRound ? getRoundRoomSummary(state.room.cards) : null;
+  const content = buildOwnedCardModalContent(me.id);
   const roleText =
     me.team === "amazons"
       ? `Jesteś Amazonką. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
@@ -1894,9 +1904,9 @@ function renderRoleModal() {
 
   els.roleModalTitle.textContent = isFirstRound ? "Twoja rola" : "Początek rundy";
   els.roleModalText.innerHTML = isFirstRound
-    ? `${escapeHtml(roleText.trim())}<br>${escapeHtml(`Masz ${formatRoundSummaryPhrase(summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(summary.trap, "trap")} i ${formatRoundSummaryPhrase(summary.empty, "empty")}.`)}`
-    : escapeHtml(`Masz ${formatRoundSummaryPhrase(getRoundRoomSummary(state.room.cards).treasure, "treasure")}, ${formatRoundSummaryPhrase(getRoundRoomSummary(state.room.cards).trap, "trap")} i ${formatRoundSummaryPhrase(getRoundRoomSummary(state.room.cards).empty, "empty")}.`);
-  els.roleModalVisual.innerHTML = isFirstRound ? buildRoundSummaryGroups(summary) : buildRoundSummaryGroups(getRoundRoomSummary(state.room.cards));
+    ? `${escapeHtml(roleText.trim())}<br>${escapeHtml(`Masz ${formatRoundSummaryPhrase(content.summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(content.summary.trap, "trap")} i ${formatRoundSummaryPhrase(content.summary.empty, "empty")}.`)}`
+    : escapeHtml(`Masz ${formatRoundSummaryPhrase(content.summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(content.summary.trap, "trap")} i ${formatRoundSummaryPhrase(content.summary.empty, "empty")}.`);
+  els.roleModalVisual.innerHTML = content.stripHtml;
   els.roleModal.classList.remove("hidden");
 }
 
