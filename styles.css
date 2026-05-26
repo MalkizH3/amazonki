@@ -493,6 +493,10 @@ button.card {
   gap: 0.75rem;
 }
 
+.role-modal-visual {
+  margin-top: 1rem;
+}
+
 .round-summary-group {
   border: 1px solid rgba(243, 229, 184, 0.18);
   border-radius: 14px;

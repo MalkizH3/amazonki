@@ -115,6 +115,7 @@ const els = {
   roundModalOkBtn: document.getElementById("roundModalOkBtn"),
   roleModal: document.getElementById("roleModal"),
   roleModalText: document.getElementById("roleModalText"),
+  roleModalVisual: document.getElementById("roleModalVisual"),
   roleModalOkBtn: document.getElementById("roleModalOkBtn"),
   toast: document.getElementById("toast"),
 };
@@ -940,6 +941,14 @@ function buildRoundSummaryGroup(label, type, count) {
   `;
 }
 
+function buildRoundSummaryGroups(summary) {
+  return [
+    buildRoundSummaryGroup("złoto", "treasure", summary.treasure),
+    buildRoundSummaryGroup("pułapki", "trap", summary.trap),
+    buildRoundSummaryGroup("puste", "empty", summary.empty),
+  ].join("");
+}
+
 function renderRoundModal() {
   if (!state.room || !state.roomId) {
     els.roundModal.classList.add("hidden");
@@ -947,7 +956,7 @@ function renderRoundModal() {
   }
 
   const room = state.room;
-  if (room.status !== "playing" || room.revealedThisRound !== 0 || room.winner) {
+  if (room.status !== "playing" || room.round === 1 || room.revealedThisRound !== 0 || room.winner) {
     els.roundModal.classList.add("hidden");
     return;
   }
@@ -961,11 +970,7 @@ function renderRoundModal() {
 
   const summary = getRoundRoomSummary(room.cards);
   els.roundModalText.textContent = `Masz ${formatRoundSummaryPhrase(summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(summary.trap, "trap")} i ${formatRoundSummaryPhrase(summary.empty, "empty")}.`;
-  els.roundModalVisual.innerHTML = [
-    buildRoundSummaryGroup("złoto", "treasure", summary.treasure),
-    buildRoundSummaryGroup("pułapki", "trap", summary.trap),
-    buildRoundSummaryGroup("puste", "empty", summary.empty),
-  ].join("");
+  els.roundModalVisual.innerHTML = buildRoundSummaryGroups(summary);
   els.roundModal.classList.remove("hidden");
 }
 
@@ -1877,21 +1882,21 @@ function renderRoleModal() {
     return;
   }
 
-  const roundAckKey = getRoundAckKey(state.room.round || 1);
-  if (localStorage.getItem(roundAckKey) !== "1") {
-    els.roleModal.classList.add("hidden");
-    return;
-  }
-
   const startMessage = state.room?.status === "playing" && state.room?.round === 1
     ? "Drużyny zostały wylosowane ponownie."
     : "";
+  const isFirstRound = state.room.round === 1;
+  const summary = isFirstRound ? getRoundRoomSummary(state.room.cards) : null;
   const roleText =
     me.team === "amazons"
       ? `Jesteś Amazonką. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
       : `Jesteś Grabieżcą. ${startMessage} Zachowaj swoją rolę w tajemnicy.`;
 
-  els.roleModalText.textContent = roleText.trim();
+  els.roleModalTitle.textContent = isFirstRound ? "Twoja rola" : "Początek rundy";
+  els.roleModalText.innerHTML = isFirstRound
+    ? `${escapeHtml(roleText.trim())}<br>${escapeHtml(`Masz ${formatRoundSummaryPhrase(summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(summary.trap, "trap")} i ${formatRoundSummaryPhrase(summary.empty, "empty")}.`)}`
+    : escapeHtml(`Masz ${formatRoundSummaryPhrase(getRoundRoomSummary(state.room.cards).treasure, "treasure")}, ${formatRoundSummaryPhrase(getRoundRoomSummary(state.room.cards).trap, "trap")} i ${formatRoundSummaryPhrase(getRoundRoomSummary(state.room.cards).empty, "empty")}.`);
+  els.roleModalVisual.innerHTML = isFirstRound ? buildRoundSummaryGroups(summary) : buildRoundSummaryGroups(getRoundRoomSummary(state.room.cards));
   els.roleModal.classList.remove("hidden");
 }
 
@@ -1903,6 +1908,9 @@ function acknowledgeRoleModal() {
   }
 
   localStorage.setItem(ackKey, "1");
+  if (state.room?.round === 1) {
+    localStorage.setItem(getRoundAckKey(1), "1");
+  }
   els.roleModal.classList.add("hidden");
 }
 
