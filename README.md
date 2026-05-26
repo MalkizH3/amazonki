@@ -1,4 +1,4 @@
-# Grabieżcy vs Amazonki (GitHub Pages + Firebase)
+# Amazonki (GitHub Pages + Firebase)
 https://gramywplanszowki.pl/storage/games/1171/files/amazonki-instrukcja.pdf
 
 Prototyp gry online zgodny ze specyfikacją:
