@@ -20,12 +20,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
 const FIREBASE_CONFIG = {
-  apiKey: "UZUPELNIJ_API_KEY",
-  authDomain: "UZUPELNIJ_AUTH_DOMAIN",
-  projectId: "UZUPELNIJ_PROJECT_ID",
-  storageBucket: "UZUPELNIJ_STORAGE_BUCKET",
-  messagingSenderId: "UZUPELNIJ_MESSAGING_SENDER_ID",
-  appId: "UZUPELNIJ_APP_ID",
+  apiKey: "AIzaSyBe9jWOPkH48gKbFAL5NQhED8S4kwR2rNk",
+  authDomain: "ki-807c6.firebaseapp.com",
+  projectId: "ki-807c6",
+  storageBucket: "ki-807c6.firebasestorage.app",
+  messagingSenderId: "588011077368",
+  appId: "1:588011077368:web:e4cc5a219d62404842050d",
+  measurementId: "G-D9HZ0JZ1QP"
 };
 
 const CARD_DISTRIBUTION = {
