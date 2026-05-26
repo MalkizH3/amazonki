@@ -939,13 +939,24 @@ function sortCardsForSummary(cards) {
 }
 
 function buildCardStrip(cards) {
-  const sortedCards = sortCardsForSummary(cards);
-
-  if (sortedCards.length === 0) {
+  if (!Array.isArray(cards) || cards.length === 0) {
     return `<div class="round-summary-empty">Brak kart.</div>`;
   }
 
-  return sortedCards
+  const groups = { treasure: [], trap: [], empty: [] };
+  cards.forEach((card) => {
+    if (card && card.type === "treasure") {
+      groups.treasure.push(card);
+    } else if (card && card.type === "trap") {
+      groups.trap.push(card);
+    } else {
+      groups.empty.push(card);
+    }
+  });
+
+  const ordered = [...groups.treasure, ...groups.trap, ...groups.empty];
+
+  return ordered
     .map((card) => `
       <div class="card round-summary-card">
         <img class="card-image round-summary-thumb" src="${getCardImagePath(card.type)}" alt="${escapeHtml(cardTypeLabel(card.type))}" />
@@ -1087,14 +1098,15 @@ function renderPlayerPanels() {
 
     const playerCards = cards.filter((card) => card.ownerId === player.id && !card.removed);
     const summary = getCardSummary(playerCards);
-    const teamClass = getPanelTeamClass(player.team);
-    const teamLabel = getTeamLabel(player.team);
+    const isMe = player.id === myId;
+    const teamClass = isMe ? getPanelTeamClass(player.team) : "pending";
+    const teamLabel = isMe ? getTeamLabel(player.team) : "";
     const keyMark = state.room.currentKeyHolder === player.id ? " [KLUCZ]" : "";
 
     panel.innerHTML = `
       <div class="player-panel-head">
         <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}${keyMark}</h3>
-        <span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>
+        ${isMe ? `<span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>` : ""}
       </div>
       <div class="player-cards"></div>
       <div class="player-actions"></div>
@@ -1903,7 +1915,7 @@ function getCardSummary(cards) {
 function renderRoleModal() {
   const me = state.user ? getPlayerById(state.user.uid) : null;
 
-  if (!state.room || !state.roomId || !me) {
+  if (!state.room || !state.roomId || !state.user) {
     els.roleModal.classList.add("hidden");
     return;
   }
@@ -1924,11 +1936,11 @@ function renderRoleModal() {
     ? "Drużyny zostały wylosowane ponownie."
     : "";
   const isFirstRound = state.room.round === 1;
-  const content = buildOwnedCardModalContent(me.id);
+  const content = buildOwnedCardModalContent(state.user.uid);
   const roleText =
-    me.team === "amazons"
+    me && me.team === "amazons"
       ? `Jesteś Amazonką. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
-      : me.team === "raiders"
+      : me && me.team === "raiders"
         ? `Jesteś Grabieżcą. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
         : `Trwa przydzielanie drużyn. Za chwilę pojawi się Twoja rola.`;
 
