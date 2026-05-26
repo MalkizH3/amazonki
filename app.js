@@ -109,6 +109,10 @@ const els = {
   endGameBtn: document.getElementById("endGameBtn"),
   tablePlayers: document.getElementById("tablePlayers"),
   winnerBanner: document.getElementById("winnerBanner"),
+  roundModal: document.getElementById("roundModal"),
+  roundModalText: document.getElementById("roundModalText"),
+  roundModalVisual: document.getElementById("roundModalVisual"),
+  roundModalOkBtn: document.getElementById("roundModalOkBtn"),
   roleModal: document.getElementById("roleModal"),
   roleModalText: document.getElementById("roleModalText"),
   roleModalOkBtn: document.getElementById("roleModalOkBtn"),
@@ -158,6 +162,7 @@ function wireEvents() {
   els.startGameBtn.addEventListener("click", startGame);
   els.nextRoundBtn.addEventListener("click", startNextRound);
   els.endGameBtn.addEventListener("click", endGame);
+  els.roundModalOkBtn.addEventListener("click", acknowledgeRoundModal);
   els.roleModalOkBtn.addEventListener("click", acknowledgeRoleModal);
   els.copyCodeBtn.addEventListener("click", copyRoomCode);
   els.roomCodeInput.addEventListener("input", () => {
@@ -802,6 +807,7 @@ function render() {
   renderPanels();
   renderLobby();
   renderGame();
+  renderRoundModal();
   renderRoleModal();
 }
 
@@ -912,6 +918,116 @@ function renderGame() {
   }
 
   renderPlayerPanels();
+}
+
+function buildRoundSummaryGroup(label, type, count) {
+  const cardsHtml = count > 0
+    ? Array.from({ length: count }, () => `
+        <span class="round-summary-card">
+          <img src="${getCardImagePath(type)}" alt="${escapeHtml(label)}" />
+        </span>
+      `).join("")
+    : `<span class="round-summary-empty">Brak ${escapeHtml(label)}.</span>`;
+
+  return `
+    <section class="round-summary-group">
+      <div class="round-summary-group-head">
+        <strong>${escapeHtml(capitalizeFirst(label))}</strong>
+        <span>${escapeHtml(formatRoundSummaryLabel(count, type))}</span>
+      </div>
+      <div class="round-summary-strip">${cardsHtml}</div>
+    </section>
+  `;
+}
+
+function renderRoundModal() {
+  if (!state.room || !state.roomId) {
+    els.roundModal.classList.add("hidden");
+    return;
+  }
+
+  const room = state.room;
+  if (room.status !== "playing" || room.revealedThisRound !== 0 || room.winner) {
+    els.roundModal.classList.add("hidden");
+    return;
+  }
+
+  const roundNumber = room.round || 1;
+  const ackKey = getRoundAckKey(roundNumber);
+  if (localStorage.getItem(ackKey) === "1") {
+    els.roundModal.classList.add("hidden");
+    return;
+  }
+
+  const summary = getRoundRoomSummary(room.cards);
+  els.roundModalText.textContent = `Masz ${formatRoundSummaryPhrase(summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(summary.trap, "trap")} i ${formatRoundSummaryPhrase(summary.empty, "empty")}.`;
+  els.roundModalVisual.innerHTML = [
+    buildRoundSummaryGroup("złoto", "treasure", summary.treasure),
+    buildRoundSummaryGroup("pułapki", "trap", summary.trap),
+    buildRoundSummaryGroup("puste", "empty", summary.empty),
+  ].join("");
+  els.roundModal.classList.remove("hidden");
+}
+
+function acknowledgeRoundModal() {
+  const roundNumber = state.room?.round || 1;
+  const ackKey = getRoundAckKey(roundNumber);
+  localStorage.setItem(ackKey, "1");
+  els.roundModal.classList.add("hidden");
+}
+
+function getRoundAckKey(roundNumber) {
+  if (!state.roomId || !state.room) {
+    return null;
+  }
+
+  const token = state.room.gameToken != null ? String(state.room.gameToken) : "unknown";
+  return `gva_round_ack_${state.roomId}_${token}_${roundNumber}`;
+}
+
+function getRoundRoomSummary(cards) {
+  const remainingCards = Array.isArray(cards) ? cards.filter((card) => !card.removed) : [];
+  return getCardSummary(remainingCards);
+}
+
+function formatRoundSummaryLabel(count, type) {
+  if (type === "empty") {
+    return pluralizeRoomWord(count, "puste pomieszczenie", "puste pomieszczenia", "pustych pomieszczeń");
+  }
+
+  if (type === "treasure") {
+    return pluralizeRoomWord(count, "pomieszczenie ze skarbem", "pomieszczenia ze skarbem", "pomieszczeń ze skarbem");
+  }
+
+  return pluralizeRoomWord(count, "pomieszczenie z pułapką", "pomieszczenia z pułapką", "pomieszczeń z pułapką");
+}
+
+function formatRoundSummaryPhrase(count, type) {
+  return `${count} ${formatRoundSummaryLabel(count, type)}`;
+}
+
+function pluralizeRoomWord(count, singular, few, many) {
+  const absCount = Math.abs(count);
+  const lastTwo = absCount % 100;
+  const lastOne = absCount % 10;
+
+  if (absCount === 1) {
+    return singular;
+  }
+
+  if (lastOne >= 2 && lastOne <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) {
+    return few;
+  }
+
+  return many;
+}
+
+function capitalizeFirst(text) {
+  if (!text) {
+    return text;
+  }
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function renderPlayerPanels() {
@@ -1757,6 +1873,12 @@ function renderRoleModal() {
 
   const ackKey = getRoleAckKey();
   if (localStorage.getItem(ackKey) === "1") {
+    els.roleModal.classList.add("hidden");
+    return;
+  }
+
+  const roundAckKey = getRoundAckKey(state.room.round || 1);
+  if (localStorage.getItem(roundAckKey) !== "1") {
     els.roleModal.classList.add("hidden");
     return;
   }
