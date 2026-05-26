@@ -1086,28 +1086,16 @@ function renderPlayerPanels() {
     panel.className = "player-panel";
 
     const playerCards = cards.filter((card) => card.ownerId === player.id && !card.removed);
-    const hiddenCount = playerCards.filter((card) => !card.revealed).length;
     const summary = getCardSummary(playerCards);
-
-    const visibleTeam = getVisibleTeamInfo(player);
+    const teamClass = getPanelTeamClass(player.team);
+    const teamLabel = getTeamLabel(player.team);
     const keyMark = state.room.currentKeyHolder === player.id ? " [KLUCZ]" : "";
 
     panel.innerHTML = `
       <div class="player-panel-head">
-        <h3>${escapeHtml(player.name || "Bez nazwy")}${keyMark}</h3>
-        <small>${visibleTeam.label} • ukryte: ${hiddenCount}</small>
+        <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}${keyMark}</h3>
+        <span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>
       </div>
-      ${
-        player.id === myId
-          ? `
-        <div class="player-report">
-          <span>Złoto: ${summary.treasure}</span>
-          <span>Pułapki: ${summary.trap}</span>
-          <span>Puste: ${summary.empty}</span>
-        </div>
-      `
-          : ""
-      }
       <div class="player-cards"></div>
       <div class="player-actions"></div>
     `;
@@ -1871,6 +1859,16 @@ function getTeamLabel(team) {
   return "Nieprzydzielona";
 }
 
+function getPanelTeamClass(team) {
+  if (team === "raiders") {
+    return "raiders";
+  }
+  if (team === "amazons") {
+    return "amazons";
+  }
+  return "pending";
+}
+
 function getVisibleTeamInfo(player) {
   if (player.id === state.user?.uid) {
     return {
@@ -1911,7 +1909,7 @@ function renderRoleModal() {
   }
 
   const isGameStart = state.room.status === "playing" && state.room.round === 1;
-  if (!isGameStart || !me.team) {
+  if (!isGameStart) {
     els.roleModal.classList.add("hidden");
     return;
   }
@@ -1930,7 +1928,9 @@ function renderRoleModal() {
   const roleText =
     me.team === "amazons"
       ? `Jesteś Amazonką. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
-      : `Jesteś Grabieżcą. ${startMessage} Zachowaj swoją rolę w tajemnicy.`;
+      : me.team === "raiders"
+        ? `Jesteś Grabieżcą. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
+        : `Trwa przydzielanie drużyn. Za chwilę pojawi się Twoja rola.`;
 
   els.roleModalTitle.textContent = isFirstRound ? "Twoja rola" : "Początek rundy";
   els.roleModalText.innerHTML = isFirstRound

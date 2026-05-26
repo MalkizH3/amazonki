@@ -333,6 +333,25 @@ select {
   font-size: 1rem;
 }
 
+.player-name.raiders,
+.tag.raiders {
+  color: #f7c553;
+}
+
+.player-name.amazons,
+.tag.amazons {
+  color: #dd2828;
+}
+
+.player-name.pending,
+.tag.pending {
+  color: #d8d8d8;
+}
+
+.player-name {
+  font-family: "Bree Serif", serif;
+}
+
 .player-report {
   margin-top: 0.45rem;
   display: flex;
@@ -523,7 +542,7 @@ button.card {
 }
 
 .round-summary-thumb {
-  height: 150px;
+  height: 150px !important;
   border-radius: 10px;
 }
 
