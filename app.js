@@ -964,6 +964,36 @@ function buildOwnedCardModalContent(playerId) {
   };
 }
 
+function formatOwnedCardsSentence(summary) {
+  const parts = [];
+
+  if (summary.treasure > 0) {
+    parts.push(formatRoundSummaryPhrase(summary.treasure, "treasure"));
+  }
+
+  if (summary.trap > 0) {
+    parts.push(formatRoundSummaryPhrase(summary.trap, "trap"));
+  }
+
+  if (summary.empty > 0) {
+    parts.push(formatRoundSummaryPhrase(summary.empty, "empty"));
+  }
+
+  if (parts.length === 0) {
+    return "Nie masz jeszcze żadnych kart.";
+  }
+
+  if (parts.length === 1) {
+    return `Masz ${parts[0]}.`;
+  }
+
+  if (parts.length === 2) {
+    return `Masz ${parts[0]} i ${parts[1]}.`;
+  }
+
+  return `Masz ${parts[0]}, ${parts[1]} i ${parts[2]}.`;
+}
+
 function renderRoundModal() {
   if (!state.room || !state.roomId) {
     els.roundModal.classList.add("hidden");
@@ -984,7 +1014,7 @@ function renderRoundModal() {
   }
 
   const content = buildOwnedCardModalContent(state.user.uid);
-  els.roundModalText.textContent = `Początek rundy ${roundNumber}. Masz ${formatRoundSummaryPhrase(content.summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(content.summary.trap, "trap")} i ${formatRoundSummaryPhrase(content.summary.empty, "empty")}.`;
+  els.roundModalText.textContent = `Początek rundy ${roundNumber}. ${formatOwnedCardsSentence(content.summary)}`;
   els.roundModalVisual.innerHTML = content.stripHtml;
   els.roundModal.classList.remove("hidden");
 }
@@ -1904,8 +1934,8 @@ function renderRoleModal() {
 
   els.roleModalTitle.textContent = isFirstRound ? "Twoja rola" : "Początek rundy";
   els.roleModalText.innerHTML = isFirstRound
-    ? `${escapeHtml(roleText.trim())}<br>${escapeHtml(`Masz ${formatRoundSummaryPhrase(content.summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(content.summary.trap, "trap")} i ${formatRoundSummaryPhrase(content.summary.empty, "empty")}.`)}`
-    : escapeHtml(`Masz ${formatRoundSummaryPhrase(content.summary.treasure, "treasure")}, ${formatRoundSummaryPhrase(content.summary.trap, "trap")} i ${formatRoundSummaryPhrase(content.summary.empty, "empty")}.`);
+    ? `${escapeHtml(roleText.trim())}<br>${escapeHtml(formatOwnedCardsSentence(content.summary))}`
+    : escapeHtml(formatOwnedCardsSentence(content.summary));
   els.roleModalVisual.innerHTML = content.stripHtml;
   els.roleModal.classList.remove("hidden");
 }
