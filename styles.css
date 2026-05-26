@@ -489,7 +489,8 @@ button.card {
 }
 
 .round-modal-card {
-  width: min(720px, 100%);
+  width: fit-content;
+  max-width: calc(100% - 2rem);
   border: 1px solid rgba(243, 229, 184, 0.35);
   background: linear-gradient(160deg, rgba(14, 36, 28, 0.98), rgba(8, 19, 15, 0.98));
   border-radius: 16px;
@@ -510,6 +511,7 @@ button.card {
   margin-top: 1rem;
   display: grid;
   gap: 0.6rem;
+  overflow: auto;
 }
 
 .role-modal-visual {
@@ -574,7 +576,8 @@ button.card {
 }
 
 .role-modal-card {
-  width: min(420px, 100%);
+  width: fit-content;
+  max-width: calc(100% - 2rem);
   border: 1px solid rgba(243, 229, 184, 0.35);
   background: linear-gradient(160deg, rgba(14, 36, 28, 0.98), rgba(8, 19, 15, 0.98));
   border-radius: 16px;
