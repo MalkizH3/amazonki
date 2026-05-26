@@ -114,6 +114,7 @@ const els = {
   roundModalVisual: document.getElementById("roundModalVisual"),
   roundModalOkBtn: document.getElementById("roundModalOkBtn"),
   roleModal: document.getElementById("roleModal"),
+  roleModalTitle: document.getElementById("roleModalTitle"),
   roleModalText: document.getElementById("roleModalText"),
   roleModalVisual: document.getElementById("roleModalVisual"),
   roleModalOkBtn: document.getElementById("roleModalOkBtn"),
@@ -1863,10 +1864,10 @@ function assignRandomTeams(players, teamPool) {
 
 function getTeamLabel(team) {
   if (team === "raiders") {
-    return "Grabieżcy";
+    return "Grabieżca";
   }
   if (team === "amazons") {
-    return "Amazonki";
+    return "Amazonka";
   }
   return "Nieprzydzielona";
 }
