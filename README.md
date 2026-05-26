@@ -1,5 +1,6 @@
 # Grabieżcy vs Amazonki (GitHub Pages + Firebase)
 https://gramywplanszowki.pl/storage/games/1171/files/amazonki-instrukcja.pdf
+
 Prototyp gry online zgodny ze specyfikacją:
 - 3-10 graczy
 - 2 drużyny: Grabieżcy i Amazonki
