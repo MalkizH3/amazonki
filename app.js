@@ -11,11 +11,14 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import {
   getAuth,
-  signInAnonymously,
+  browserLocalPersistence,
+  setPersistence,
+  signInAnonymously,  
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
@@ -59,8 +62,10 @@ const CARD_IMAGES = {
 };
 
 const MAX_ROUNDS = 4;
+const ROOM_EXPIRY_MS = 3 * 60 * 1000;
 const LOCAL_ROOM_PREFIX = "gva_local_room_";
 const LOCAL_UID_KEY = "gva_local_uid";
+const ACTIVE_ROOM_KEY = "gva_active_room_id";
 
 const state = {
   mode: "firebase",
@@ -73,7 +78,9 @@ const state = {
   roomUnsub: null,
   playersUnsub: null,
   localSyncTimer: null,
+  cleanupTimer: null,
   animatedCardIds: new Set(),
+  hostCleanupTriggered: false,
 };
 
 const els = {
@@ -126,6 +133,8 @@ async function init() {
 
     showConnection("Logowanie anonimowe...");
 
+      await setPersistence(state.auth, browserLocalPersistence);
+
     await signInAnonymously(state.auth);
     onAuthStateChanged(state.auth, (user) => {
       if (!user) {
@@ -134,6 +143,7 @@ async function init() {
 
       state.user = user;
       hideConnection();
+        void restoreActiveRoomIfAny();
       toast("Połączono jako anonimowy użytkownik Firebase.");
     });
   } catch (error) {
@@ -221,6 +231,8 @@ async function createRoom() {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     gameToken: null,
+    finishedAt: null,
+    hostReturnedAt: null,
     maxRounds: MAX_ROUNDS,
     round: 1,
     currentKeyHolder: null,
@@ -305,6 +317,7 @@ async function subscribeToRoom(roomId) {
 
   unsubscribeRoomListeners();
   state.roomId = roomId;
+  setActiveRoom(roomId);
 
   const roomRef = doc(state.db, "rooms", roomId);
   const playersQuery = query(
@@ -315,6 +328,8 @@ async function subscribeToRoom(roomId) {
   state.roomUnsub = onSnapshot(roomRef, (snap) => {
     if (!snap.exists()) {
       toast("Pokój został usunięty.");
+      clearFinishedCleanupTimer();
+      clearActiveRoom();
       unsubscribeRoomListeners();
       resetRoomState();
       render();
@@ -322,6 +337,7 @@ async function subscribeToRoom(roomId) {
     }
 
     state.room = snap.data();
+    scheduleFinishedRoomCleanup();
     render();
   });
 
@@ -340,6 +356,8 @@ function unsubscribeRoomListeners() {
     state.localSyncTimer = null;
   }
 
+  clearFinishedCleanupTimer();
+
   if (state.roomUnsub) {
     state.roomUnsub();
   }
@@ -355,6 +373,111 @@ function resetRoomState() {
   state.roomId = null;
   state.room = null;
   state.players = [];
+  state.hostCleanupTriggered = false;
+  clearFinishedCleanupTimer();
+}
+
+function clearFinishedCleanupTimer() {
+  if (state.cleanupTimer) {
+    window.clearTimeout(state.cleanupTimer);
+    state.cleanupTimer = null;
+  }
+}
+
+function getTimestampMillis(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+
+  if (typeof value.seconds === "number") {
+    return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+  }
+
+  return null;
+}
+
+function scheduleFinishedRoomCleanup() {
+  clearFinishedCleanupTimer();
+
+  if (!state.room || state.room.status !== "finished") {
+    return;
+  }
+
+  if (state.room.hostReturnedAt) {
+    return;
+  }
+
+  const finishedAt = getTimestampMillis(state.room.finishedAt);
+  if (!finishedAt) {
+    return;
+  }
+
+  const delay = ROOM_EXPIRY_MS - (Date.now() - finishedAt);
+  if (delay <= 0) {
+    void deleteExpiredFinishedRoom();
+    return;
+  }
+
+  state.cleanupTimer = window.setTimeout(() => {
+    void deleteExpiredFinishedRoom();
+  }, delay);
+}
+
+async function deleteExpiredFinishedRoom() {
+  if (!state.roomId || !state.room || state.room.status !== "finished") {
+    return;
+  }
+
+  if (state.room.hostReturnedAt) {
+    return;
+  }
+
+  const finishedAt = getTimestampMillis(state.room.finishedAt);
+  if (!finishedAt || Date.now() - finishedAt < ROOM_EXPIRY_MS) {
+    scheduleFinishedRoomCleanup();
+    return;
+  }
+
+  if (state.mode === "local") {
+    localStorage.removeItem(localRoomKey(state.roomId));
+    clearActiveRoom();
+    unsubscribeRoomListeners();
+    resetRoomState();
+    render();
+    return;
+  }
+
+  if (!state.db) {
+    return;
+  }
+
+  try {
+    const roomRef = doc(state.db, "rooms", state.roomId);
+    const playersSnap = await getDocs(collection(state.db, "rooms", state.roomId, "players"));
+    const batch = writeBatch(state.db);
+
+    playersSnap.forEach((playerDoc) => {
+      batch.delete(playerDoc.ref);
+    });
+
+    batch.delete(roomRef);
+    await batch.commit();
+  } catch {
+    // Best-effort cleanup after expiry.
+  } finally {
+    clearActiveRoom();
+    unsubscribeRoomListeners();
+    resetRoomState();
+    render();
+  }
 }
 
 async function startGame() {
@@ -416,6 +539,8 @@ async function startGame() {
     status: "playing",
     updatedAt: serverTimestamp(),
     gameToken,
+    finishedAt: null,
+    hostReturnedAt: null,
     maxRounds: MAX_ROUNDS,
     round: 1,
     currentKeyHolder: firstKeyHolder,
@@ -667,6 +792,8 @@ async function endGame() {
       status: "finished",
       awaitingGameEnd: false,
       awaitingNextRound: false,
+      finishedAt: serverTimestamp(),
+      hostReturnedAt: null,
     });
   });
 }
@@ -979,6 +1106,107 @@ function enableLocalMode(message) {
   });
 }
 
+function setActiveRoom(roomId) {
+  localStorage.setItem(ACTIVE_ROOM_KEY, roomId);
+}
+
+function clearActiveRoom() {
+  localStorage.removeItem(ACTIVE_ROOM_KEY);
+}
+
+async function restoreActiveRoomIfAny() {
+  if (state.roomId || !state.user) {
+    return;
+  }
+
+  const roomId = localStorage.getItem(ACTIVE_ROOM_KEY);
+  if (!roomId) {
+    return;
+  }
+
+  const profile = getProfile();
+  if (state.mode === "local") {
+    const payload = readLocalRoomPayload(roomId);
+    if (!payload) {
+      clearActiveRoom();
+      return;
+    }
+
+    const localFinishedAt = getTimestampMillis(payload.room?.finishedAt);
+    if (
+      payload.room?.status === "finished" &&
+      localFinishedAt &&
+      Date.now() - localFinishedAt >= ROOM_EXPIRY_MS
+    ) {
+      localStorage.removeItem(localRoomKey(roomId));
+      clearActiveRoom();
+      return;
+    }
+
+    subscribeToRoomLocal(roomId);
+    toast(`Przywrócono pokój ${roomId}.`);
+    return;
+  }
+
+  if (!state.db) {
+    return;
+  }
+
+  const roomRef = doc(state.db, "rooms", roomId);
+  const roomSnap = await getDoc(roomRef);
+
+  if (!roomSnap.exists()) {
+    clearActiveRoom();
+    return;
+  }
+
+  const roomData = roomSnap.data();
+  const finishedAt = getTimestampMillis(roomData.finishedAt);
+  if (
+    roomData.status === "finished" &&
+    finishedAt &&
+    Date.now() - finishedAt >= ROOM_EXPIRY_MS
+  ) {
+    try {
+      const playersSnap = await getDocs(collection(state.db, "rooms", roomId, "players"));
+      const batch = writeBatch(state.db);
+      playersSnap.forEach((playerDoc) => batch.delete(playerDoc.ref));
+      batch.delete(roomRef);
+      await batch.commit();
+    } catch {
+      // Best-effort cleanup when the finished room has expired.
+    }
+
+    clearActiveRoom();
+    return;
+  }
+
+  if (profile) {
+    try {
+      await upsertPlayerInRoom(roomId, profile);
+    } catch {
+      // If the player doc can't be refreshed yet, we still try to reconnect.
+    }
+  }
+
+  await subscribeToRoom(roomId);
+
+  if (
+    state.room?.status === "finished" &&
+    isHost() &&
+    !state.room.hostReturnedAt &&
+    finishedAt &&
+    Date.now() - finishedAt < ROOM_EXPIRY_MS
+  ) {
+    await updateDoc(roomRef, {
+      hostReturnedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  toast(`Przywrócono pokój ${roomId}.`);
+}
+
 function getOrCreateLocalUid() {
   const existing = sessionStorage.getItem(LOCAL_UID_KEY);
   if (existing) {
@@ -1048,6 +1276,8 @@ async function createRoomLocal() {
       cards: [],
       winner: null,
       winnerReason: null,
+      finishedAt: null,
+      hostReturnedAt: null,
     },
     players: [
       {
@@ -1059,9 +1289,9 @@ async function createRoomLocal() {
       },
     ],
   };
-
   writeLocalRoomPayload(roomId, payload);
   subscribeToRoomLocal(roomId);
+  setActiveRoom(roomId);
   toast(`Utworzono pokój ${roomId} (tryb lokalny).`);
 }
 
@@ -1090,6 +1320,7 @@ async function joinRoomFromInputLocal() {
 
   upsertPlayerInRoomLocal(roomId, profile);
   subscribeToRoomLocal(roomId);
+  setActiveRoom(roomId);
   toast(`Dołączono do ${roomId} (tryb lokalny).`);
 }
 
@@ -1128,6 +1359,7 @@ function subscribeToRoomLocal(roomId) {
   unsubscribeRoomListeners();
   state.roomId = roomId;
   els.roomCodeInput.value = roomId;
+  setActiveRoom(roomId);
 
   loadLocalRoom(roomId);
   state.localSyncTimer = window.setInterval(() => {
@@ -1140,6 +1372,7 @@ function loadLocalRoom(roomId) {
 
   if (!payload) {
     toast("Pokój został usunięty.");
+    clearActiveRoom();
     unsubscribeRoomListeners();
     resetRoomState();
     render();
@@ -1148,6 +1381,7 @@ function loadLocalRoom(roomId) {
 
   state.room = payload.room || null;
   state.players = (payload.players || []).slice().sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+  scheduleFinishedRoomCleanup();
   render();
 }
 
@@ -1201,6 +1435,8 @@ function startOrRestartGameLocal() {
     status: "playing",
     updatedAt: now,
     gameToken: now,
+    finishedAt: null,
+    hostReturnedAt: null,
     maxRounds: MAX_ROUNDS,
     round: 1,
     currentKeyHolder: firstKeyHolder,
@@ -1436,6 +1672,8 @@ function endGameLocal() {
     status: "finished",
     awaitingGameEnd: false,
     awaitingNextRound: false,
+    finishedAt: Date.now(),
+    hostReturnedAt: null,
   };
 
   writeLocalRoomPayload(state.roomId, payload);
