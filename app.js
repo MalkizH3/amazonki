@@ -121,6 +121,9 @@ const els = {
   toast: document.getElementById("toast"),
 };
 
+let lastKeyHolder = null;
+let pendingKeyFromRect = null;
+
 init();
 
 async function init() {
@@ -575,6 +578,17 @@ async function startGame() {
 
 async function passKeyAndReveal(targetId) {
   if (state.mode === "local") {
+    // capture current key rect before local transfer
+    try {
+      const currentEl = document.querySelector(`[data-player-id="${state.user.uid}"] .player-cards .key-card`);
+      if (currentEl) {
+        const r = currentEl.getBoundingClientRect();
+        pendingKeyFromRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+      }
+    } catch (e) {
+      pendingKeyFromRect = null;
+    }
+
     passKeyAndRevealLocal(targetId);
     return;
   }
@@ -587,6 +601,16 @@ async function passKeyAndReveal(targetId) {
   const playerIds = state.players.map((p) => p.id);
 
   try {
+    // capture current key rect before transaction (so we have a reliable start position)
+    try {
+      const currentEl = document.querySelector(`[data-player-id="${state.user.uid}"] .player-cards .key-card`);
+      if (currentEl) {
+        const r = currentEl.getBoundingClientRect();
+        pendingKeyFromRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+      }
+    } catch (e) {
+      pendingKeyFromRect = null;
+    }
     await runTransaction(state.db, async (tx) => {
       const roomSnap = await tx.get(roomRef);
       if (!roomSnap.exists()) {
@@ -878,6 +902,11 @@ function renderGame() {
   const deckStats = room.deckStats || { treasure: 0, trap: 0 };
   const keyHolder = getPlayerById(room.currentKeyHolder);
 
+  if (room.status === "playing" && room.round === 1 && (room.revealedThisRound || 0) === 0 && room.currentKeyHolder) {
+    lastKeyHolder = room.currentKeyHolder;
+    pendingKeyFromRect = null;
+  }
+
   els.gameStatusBadge.textContent =
     room.status === "finished" ? "Gra zakończona" : "Gra trwa";
   els.roundValue.textContent = `${room.round} / ${room.maxRounds || MAX_ROUNDS}`;
@@ -909,6 +938,28 @@ function renderGame() {
     "hidden",
     !isHost() || room.status !== "playing" || !awaitingGameEnd,
   );
+
+  // Move the action buttons into the header for the host, revert for others
+  try {
+    const headerRow = document.querySelector('#gamePanel .panel-header-row');
+    const gamePanelEl = document.getElementById('gamePanel');
+    const footerButtons = els.nextRoundBtn.parentElement; // the .button-row containing the buttons
+
+    if (isHost()) {
+      // insert buttons between the h2 and badge (before badge)
+      const badge = headerRow.querySelector('.badge');
+      if (badge && footerButtons.parentElement !== headerRow) {
+        headerRow.insertBefore(footerButtons, badge);
+      }
+    } else {
+      // ensure buttons are back in their original place (before tablePlayers)
+      if (footerButtons.parentElement !== gamePanelEl) {
+        gamePanelEl.insertBefore(footerButtons, els.tablePlayers);
+      }
+    }
+  } catch (e) {
+    // non-fatal
+  }
 
   if (room.winner) {
     const winnerLabel = room.winner === "raiders" ? "Grabieżcy" : "Amazonki";
@@ -1088,25 +1139,35 @@ function capitalizeFirst(text) {
 }
 
 function renderPlayerPanels() {
-  els.tablePlayers.innerHTML = "";
+  // Capture previous key position (if any) before we clear and re-render
+  let prevKeyRect = null;
+  if (lastKeyHolder) {
+    const prevKeyEl = els.tablePlayers.querySelector(`[data-player-id="${lastKeyHolder}"] .player-cards .key-card`) || els.tablePlayers.querySelector(`[data-player-id="${lastKeyHolder}"] .player-panel-head`);
+    if (prevKeyEl) {
+      const r = prevKeyEl.getBoundingClientRect();
+      prevKeyRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+    }
+  }
 
+  els.tablePlayers.innerHTML = "";
   const cards = Array.isArray(state.room?.cards) ? state.room.cards : [];
   const myId = state.user?.uid;
+  const currentKeyHolder = state.room?.currentKeyHolder || null;
 
   state.players.forEach((player) => {
     const panel = document.createElement("article");
     panel.className = "player-panel";
+    panel.dataset.playerId = player.id;
 
     const playerCards = cards.filter((card) => card.ownerId === player.id && !card.removed);
     const summary = getCardSummary(playerCards);
     const isMe = player.id === myId;
     const teamClass = isMe ? getPanelTeamClass(player.team) : "pending";
     const teamLabel = isMe ? getTeamLabel(player.team) : "";
-    const keyMark = state.room.currentKeyHolder === player.id ? " [KLUCZ]" : "";
 
     panel.innerHTML = `
       <div class="player-panel-head">
-        <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}${keyMark}</h3>
+        <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}</h3>
         ${isMe ? `<span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>` : ""}
       </div>
       <div class="player-cards"></div>
@@ -1115,7 +1176,10 @@ function renderPlayerPanels() {
 
     const cardsWrap = panel.querySelector(".player-cards");
 
-    if (playerCards.length === 0) {
+    // If player holds the key, add key card into the same cards area
+    const holdsKey = currentKeyHolder === player.id;
+
+    if (playerCards.length === 0 && !holdsKey) {
       const emptyCard = document.createElement("div");
       emptyCard.className = "card back";
       emptyCard.textContent = "Brak kart";
@@ -1135,20 +1199,59 @@ function renderPlayerPanels() {
           cardEl.type = "button";
         }
 
-        const visible = card.revealed;
-        const cardImage = visible ? getCardImagePath(card.type) : getCardImagePath("hidden");
-        const cardAlt = visible ? cardTypeLabel(card.type) : "Ukryta karta";
-        if (!visible) {
-          cardEl.className = "card card-button back";
-        } else {
-          cardEl.className = `card ${cardTypeClass(card.type)}`;
+        // base card class
+        cardEl.className = "card";
+
+        // build inner faces: front (back of card) and back (face of card)
+        const frontImgPath = getCardImagePath("hidden");
+        const backImgPath = getCardImagePath(card.type);
+
+        const inner = document.createElement("div");
+        inner.className = "card-inner";
+
+        const faceFront = document.createElement("div");
+        faceFront.className = "card-face front";
+        const imgFront = document.createElement("img");
+        imgFront.className = "card-image";
+        imgFront.src = frontImgPath;
+        imgFront.alt = "Ukryta karta";
+        faceFront.appendChild(imgFront);
+
+        const faceBack = document.createElement("div");
+        faceBack.className = "card-face back";
+        const imgBack = document.createElement("img");
+        imgBack.className = "card-image";
+        imgBack.src = backImgPath;
+        imgBack.alt = cardTypeLabel(card.type);
+        faceBack.appendChild(imgBack);
+
+        inner.appendChild(faceFront);
+        inner.appendChild(faceBack);
+        cardEl.appendChild(inner);
+
+        // If the card is already revealed and we've already animated it before, ensure it's rendered revealed
+        if (card.revealed && state.animatedCardIds.has(card.id)) {
+          cardEl.classList.add("is-revealed");
         }
 
-        cardEl.innerHTML = `<img class="card-image" src="${cardImage}" alt="${cardAlt}" />`;
+        // If card is newly revealed (not seen before), trigger flip animation
+        if (card.revealed && !state.animatedCardIds.has(card.id)) {
+          // Append without revealed class, then flip on next frame
+          cardsWrap.appendChild(cardEl);
+          // small delay to allow DOM insertion
+          requestAnimationFrame(() => {
+            // trigger flip
+            cardEl.classList.add("is-revealed");
+            // mark as animated so we don't re-run
+            state.animatedCardIds.add(card.id);
+          });
+        } else {
+          // not newly revealed: append normally
+          cardsWrap.appendChild(cardEl);
+        }
 
         if (card.highlighted) {
           cardEl.classList.add("revealed-lifted");
-
           if (!state.animatedCardIds.has(card.id)) {
             cardEl.classList.add("revealed-animate");
             state.animatedCardIds.add(card.id);
@@ -1156,15 +1259,49 @@ function renderPlayerPanels() {
         }
 
         if (canReveal) {
-          cardEl.addEventListener("click", () => passKeyAndReveal(card.id));
+          cardEl.addEventListener("click", () => {
+            // locally trigger flip immediately for the clicking client
+            try {
+              cardEl.classList.add("is-revealed");
+              state.animatedCardIds.add(card.id);
+            } catch (e) {
+              // ignore
+            }
+            passKeyAndReveal(card.id);
+          });
         }
-
-        cardsWrap.appendChild(cardEl);
       });
+
+      if (holdsKey) {
+        const keyCard = document.createElement("div");
+        keyCard.className = "card key-card";
+        keyCard.innerHTML = `<img src="images/klucz.png" class="card-key-img" alt="klucz">`;
+        cardsWrap.appendChild(keyCard);
+      }
     }
 
     els.tablePlayers.appendChild(panel);
   });
+
+    // Animate key transfer when holder changes. Prefer pendingKeyFromRect (captured on click), fallback to prevKeyRect
+    if (lastKeyHolder !== currentKeyHolder) {
+      try {
+        const fromRect = pendingKeyFromRect || prevKeyRect;
+        if (fromRect && currentKeyHolder) {
+          const toEl = els.tablePlayers.querySelector(`[data-player-id="${currentKeyHolder}"] .player-cards .key-card`) || els.tablePlayers.querySelector(`[data-player-id="${currentKeyHolder}"] .player-panel-head`);
+          if (toEl) {
+            const r = toEl.getBoundingClientRect();
+            const toRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+            animateKeyTransferRects(fromRect, toRect, toEl);
+          }
+        }
+      } catch (e) {
+        console.warn("Key transfer animation failed:", e);
+      }
+
+      pendingKeyFromRect = null;
+      lastKeyHolder = currentKeyHolder;
+    }
 }
 
 function cardTypeLabel(type) {
@@ -1266,6 +1403,76 @@ function enableLocalMode(message) {
       loadLocalRoom(state.roomId);
     }
   });
+}
+
+
+function animateKeyTransferRects(fromRect, toRect, toEl) {
+  const fly = document.createElement("img");
+  fly.src = "images/klucz.png";
+  fly.className = "key-fly";
+  // Start with the exact source rectangle size & position
+  const startX = Math.round(fromRect.left);
+  const startY = Math.round(fromRect.top);
+  const endX = Math.round(toRect.left);
+  const endY = Math.round(toRect.top);
+
+  // Set fly to match source element's size and position exactly
+  fly.style.width = `${Math.round(fromRect.width)}px`;
+  fly.style.height = `${Math.round(fromRect.height)}px`;
+  fly.style.left = `${startX}px`;
+  fly.style.top = `${startY}px`;
+  fly.style.transform = `translate3d(0px, 0px, 0)`;
+  fly.style.opacity = "1";
+  // disable CSS transition, we'll animate via requestAnimationFrame for custom easing
+  fly.style.transition = "none";
+
+  document.body.appendChild(fly);
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const duration = 1500; // ms
+
+  // If we have the actual destination element, hide its real key image until fly arrives
+  let suppressedImg = null;
+  try {
+    if (toEl) {
+      suppressedImg = toEl.querySelector && (toEl.querySelector('.card-key-img') || toEl.querySelector('img'));
+      if (suppressedImg) {
+        suppressedImg.style.visibility = 'hidden';
+      }
+    }
+  } catch (e) {
+    suppressedImg = null;
+  }
+
+  // easing: accelerate then decelerate (easeInOutCubic)
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  let start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+    const t = Math.min(1, elapsed / duration);
+    const eased = easeInOutCubic(t);
+
+    const x = dx * eased;
+    const y = dy * eased;
+
+    // Translate the element from its original top-left to the new top-left
+    fly.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    fly.style.opacity = "1";
+
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      if (suppressedImg) suppressedImg.style.visibility = '';
+      fly.remove();
+    }
+  }
+
+  requestAnimationFrame(step);
 }
 
 function setActiveRoom(roomId) {

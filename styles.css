@@ -1,15 +1,15 @@
 :root {
-  --bg: #112b21;
-  --bg-2: #0a1c16;
+  --bg: #17061a;
+  --bg-2: #0f0410;
   --text: #f6f3eb;
   --muted: #d6cfbf;
-  --panel: rgba(14, 36, 28, 0.78);
+  --panel: rgba(12, 4, 22, 0.78);
   --line: rgba(243, 229, 184, 0.25);
   --gold: #e3be63;
   --treasure: #f0cb6d;
   --trap: #d76a57;
-  --blank: #88a58f;
-  --accent: #7bc59d;
+  --blank: #53385e;
+  --accent: #2a0d2f;
 }
 
 * {
@@ -21,10 +21,13 @@ body {
   min-height: 100vh;
   font-family: "Chakra Petch", sans-serif;
   color: var(--text);
-  background:
+  background-image: url("./images/background.png"),
     radial-gradient(circle at 85% 15%, rgba(250, 190, 94, 0.2), transparent 35%),
-    radial-gradient(circle at 20% 80%, rgba(96, 170, 126, 0.25), transparent 35%),
+    radial-gradient(circle at 20% 80%, rgba(12, 4, 22, 0.25), transparent 35%),
     linear-gradient(140deg, var(--bg) 0%, var(--bg-2) 60%, #07120d 100%);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-position: center center, 85% 15%, 20% 80%, 0 0;
+  background-size: cover, 35% 35%, 35% 35%, auto;
   overflow-x: hidden;
 }
 
@@ -51,7 +54,7 @@ body {
   height: 320px;
   bottom: -7rem;
   right: -6rem;
-  background: #4e9a77;
+  background: #2f1a33;
   animation: driftB 14s ease-in-out infinite alternate;
 }
 
@@ -86,7 +89,7 @@ body {
 .app-header {
   padding: 1.2rem 1.4rem;
   border: 1px solid var(--line);
-  background: linear-gradient(160deg, rgba(19, 43, 34, 0.95), rgba(10, 23, 18, 0.85));
+  background: linear-gradient(160deg, rgba(12, 4, 22, 0.95), rgba(12, 4, 22, 0.85));
   border-radius: 18px;
   animation: fadeInUp 0.5s ease;
 }
@@ -161,7 +164,7 @@ input,
 select {
   width: 100%;
   border: 1px solid rgba(239, 227, 188, 0.35);
-  background: rgba(8, 18, 14, 0.85);
+  background: rgba(12, 4, 22, 0.85);
   color: var(--text);
   border-radius: 10px;
   padding: 0.55rem 0.65rem;
@@ -176,7 +179,7 @@ select {
 
 .btn {
   border: 1px solid rgba(223, 208, 165, 0.45);
-  background: rgba(19, 42, 33, 0.9);
+  background: rgba(14, 3, 30, 0.95);
   color: var(--text);
   border-radius: 10px;
   padding: 0.55rem 0.8rem;
@@ -196,7 +199,7 @@ select {
 }
 
 .btn.ghost {
-  background: rgba(16, 30, 24, 0.35);
+  background: rgba(10, 4, 20, 0.95);
 }
 
 .btn:disabled {
@@ -210,7 +213,7 @@ select {
   padding: 0.25rem 0.5rem;
   border-radius: 999px;
   font-weight: 700;
-  background: rgba(18, 35, 28, 0.9);
+  background: rgba(12, 4, 22, 0.95);
 }
 
 .muted {
@@ -230,7 +233,7 @@ select {
   padding: 0.55rem;
   border: 1px solid rgba(231, 220, 186, 0.2);
   border-radius: 10px;
-  background: rgba(11, 23, 18, 0.55);
+  background: rgba(12, 4, 22, 0.55);
 }
 
 .player-tags {
@@ -273,7 +276,7 @@ select {
   border: 1px solid rgba(232, 220, 180, 0.25);
   border-radius: 12px;
   padding: 0.55rem 0.7rem;
-  background: rgba(10, 23, 18, 0.52);
+  background: rgba(12, 4, 22, 0.52);
 }
 
 .stat-card h3 {
@@ -301,7 +304,7 @@ select {
   border: 1px solid rgba(243, 229, 184, 0.55);
   border-radius: 12px;
   padding: 0.7rem;
-  background: linear-gradient(130deg, rgba(215, 165, 83, 0.22), rgba(71, 123, 97, 0.15));
+  background: linear-gradient(130deg, rgba(215, 165, 83, 0.22), rgba(53, 18, 69, 0.15));
   font-size: 1.06rem;
   font-weight: 700;
 }
@@ -316,7 +319,7 @@ select {
 .player-panel {
   border: 1px solid rgba(233, 223, 185, 0.25);
   border-radius: 12px;
-  background: rgba(11, 24, 18, 0.65);
+  background: rgba(56, 31, 68, 0.342);
   padding: 0.7rem;
   width: 100%;
 }
@@ -365,7 +368,7 @@ select {
   border: 1px solid rgba(243, 229, 184, 0.18);
   border-radius: 999px;
   padding: 0.2rem 0.5rem;
-  background: rgba(10, 23, 18, 0.45);
+  background: rgba(12, 4, 22, 0.45);
 }
 
 .player-cards {
@@ -393,9 +396,52 @@ select {
   font-weight: 600;
   overflow: visible;
 }
+.card {
+  position: relative;
+}
 
 .card.back {
   background: transparent;
+}
+
+/* Key icon next to player name */
+.player-key {
+  width: 28px;
+  height: 28px;
+  vertical-align: middle;
+  margin-left: 0.45rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+
+/* Flying key used for transfer animation */
+.key-fly {
+  position: fixed;
+  width: 48px;
+  height: 48px;
+  z-index: 9999;
+  pointer-events: none;
+  transition: transform 1500ms cubic-bezier(.2,.9,.2,1), opacity 1500ms ease;
+  transform-origin: center;
+  opacity: 0.0;
+  will-change: transform, opacity;
+}
+
+/* Key displayed among player's cards */
+.card.key-card {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  margin-left: 2rem; /* small gap between playing cards and key */
+}
+
+.card-key-img {
+  width: auto;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.22);
 }
 
 .card.treasure {
@@ -425,6 +471,46 @@ select {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.22);
 }
 
+/* Card flip styles */
+.card-inner {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(.2,.9,.2,1);
+  display: grid; /* use grid so faces can stack but still contribute to layout */
+}
+.card-face {
+  grid-area: 1 / 1 / 2 / 2; /* stack faces in same cell */
+  backface-visibility: hidden;
+  display: grid;
+  place-items: center;
+}
+.card-face.back {
+  transform: rotateY(180deg);
+}
+.card.is-revealed {
+  z-index: 6;
+}
+
+.card.is-revealed .card-inner {
+  /* rotate and lift slightly up while flipping */
+  transform: rotateY(180deg) translateY(-15px);
+}
+
+.card.is-revealed .card-image,
+.card.is-revealed .card-face img {
+  box-shadow: 0 12px 24px rgba(0,0,0,0.32);
+}
+
+/* ensure back (hidden side) uses the same image sizing */
+.card-face img {
+  width: auto;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
 button.card {
   appearance: none;
   font: inherit;
@@ -438,7 +524,6 @@ button.card {
 }
 
 .card.revealed-lifted {
-  transform: translateY(-28px);
   z-index: 2;
 }
 
@@ -451,10 +536,10 @@ button.card {
     transform: translateY(0);
   }
   70% {
-    transform: translateY(-31px);
+    transform: translateY(-10px);
   }
   100% {
-    transform: translateY(-28px);
+    transform: translateY(-8px);
   }
 }
 
@@ -471,7 +556,7 @@ button.card {
   right: 1rem;
   bottom: 1rem;
   max-width: 360px;
-  background: rgba(8, 20, 15, 0.95);
+  background: rgba(12, 4, 22, 0.95);
   border: 1px solid rgba(234, 222, 185, 0.45);
   border-radius: 10px;
   padding: 0.65rem 0.8rem;
@@ -481,7 +566,7 @@ button.card {
 .round-modal {
   position: fixed;
   inset: 0;
-  background: rgba(4, 10, 8, 0.72);
+  background: rgba(12, 4, 22, 0.72);
   display: grid;
   place-items: center;
   z-index: 35;
@@ -492,7 +577,7 @@ button.card {
   width: fit-content;
   max-width: calc(100% - 2rem);
   border: 1px solid rgba(243, 229, 184, 0.35);
-  background: linear-gradient(160deg, rgba(14, 36, 28, 0.98), rgba(8, 19, 15, 0.98));
+  background: linear-gradient(160deg, rgba(12, 4, 22, 0.98), rgba(8, 3, 16, 0.98));
   border-radius: 16px;
   padding: 1rem;
   box-shadow: 0 18px 32px rgba(0, 0, 0, 0.4);
@@ -568,7 +653,7 @@ button.card {
 .role-modal {
   position: fixed;
   inset: 0;
-  background: rgba(4, 10, 8, 0.72);
+  background: rgba(12, 4, 22, 0.72);
   display: grid;
   place-items: center;
   z-index: 30;
@@ -579,7 +664,7 @@ button.card {
   width: fit-content;
   max-width: calc(100% - 2rem);
   border: 1px solid rgba(243, 229, 184, 0.35);
-  background: linear-gradient(160deg, rgba(14, 36, 28, 0.98), rgba(8, 19, 15, 0.98));
+  background: linear-gradient(160deg, rgba(12, 4, 22, 0.98), rgba(8, 3, 16, 0.98));
   border-radius: 16px;
   padding: 1rem;
   box-shadow: 0 18px 32px rgba(0, 0, 0, 0.4);
