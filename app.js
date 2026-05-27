@@ -1940,9 +1940,9 @@ function renderRoleModal() {
   const content = buildOwnedCardModalContent(state.user.uid);
   const roleText =
     me && me.team === "amazons"
-      ? `Jesteś Amazonką. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
+      ? `Jesteś Amazonką. ${startMessage}`
       : me && me.team === "raiders"
-        ? `Jesteś Grabieżcą. ${startMessage} Zachowaj swoją rolę w tajemnicy.`
+        ? `Jesteś Grabieżcą. ${startMessage}`
         : `Trwa przydzielanie drużyn. Za chwilę pojawi się Twoja rola.`;
 
   els.roleModalTitle.textContent = isFirstRound ? "Twoja rola" : "Początek rundy";
