@@ -1254,7 +1254,6 @@ function renderPlayerPanels() {
           cardEl.classList.add("revealed-lifted");
           if (!state.animatedCardIds.has(card.id)) {
             cardEl.classList.add("revealed-animate");
-            state.animatedCardIds.add(card.id);
           }
         }
 
