@@ -16,10 +16,8 @@
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
 
-    <!-- 🔵 IKONKA INSTRUKCJI -->
     <button id="instructionBtn" class="instruction-btn">i</button>
 
-    <!-- 🔵 MODAL INSTRUKCJI -->
     <section id="instructionModal" class="instruction-modal hidden">
       <div class="instruction-card">
         <h2>Instrukcja gry Amazonki</h2>
@@ -55,7 +53,7 @@
     </section>
 
     <main class="app-shell">
-      <header class="app-header">
+      <header class="app-header-centered">
         <p class="eyebrow">Gra dedukcyjna online</p>
         <h1>Amazonki</h1>
         <p class="subtitle">
@@ -71,17 +69,18 @@
         Łączenie z Firebase...
       </section>
 
-      <section class="panel" id="joinPanel">
-        <h2>Wejdź do gry</h2>
-
-        <div class="form-grid">
-          <label>
-            Nick
+      <section class="panel join-panel-reimagined" id="joinPanel">
+        <div class="join-segment">
+          <label for="nameInput">Wpisz nick</label>
+          <div class="input-with-action">
             <input id="nameInput" type="text" maxlength="20" placeholder="np. Szopa666" />
-          </label>
+            <button id="saveProfileBtn" class="btn">Zapisz</button>
+          </div>
+        </div>
 
-          <label>
-            Kod pokoju
+        <div class="join-segment">
+          <label for="roomCodeInput">Wpisz Kod Dołączenia</label>
+          <div class="input-with-action">
             <input
               id="roomCodeInput"
               type="text"
@@ -89,13 +88,13 @@
               placeholder="2137XD"
               style="text-transform: uppercase"
             />
-          </label>
+            <button id="joinRoomBtn" class="btn primary">Dołącz</button>
+          </div>
         </div>
 
-        <div class="button-row">
-          <button id="createRoomBtn" class="btn primary">Utwórz pokój</button>
-          <button id="joinRoomBtn" class="btn">Dołącz</button>
-          <button id="saveProfileBtn" class="btn ghost">Zapisz profil</button>
+        <div class="join-segment target-center">
+          <label>Nie masz pokoju?</label>
+          <button id="createRoomBtn" class="btn ghost full-width">Utwórz pokój</button>
         </div>
       </section>
 

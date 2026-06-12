@@ -845,8 +845,13 @@ function renderPanels() {
 
   document.body.classList.toggle("game-mode", gameStarted);
 
-  els.joinPanel.classList.toggle("hidden", hasRoom && gameStarted);
-  els.lobbyPanel.classList.toggle("hidden", !hasRoom || !(inLobby || gameFinished));
+  // 🔴 KLUCZOWA ZMIANA: Gdy gracz ma pokój (hasRoom = true), menu główne znika całkowicie.
+  els.joinPanel.classList.toggle("hidden", hasRoom);
+
+  els.lobbyPanel.classList.toggle(
+    "hidden",
+    !hasRoom || !(inLobby || gameFinished),
+  );
   els.gamePanel.classList.toggle(
     "hidden",
     !hasRoom || !state.room || state.room.status === "lobby" || state.room.status === "finished",

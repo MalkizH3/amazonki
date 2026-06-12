@@ -86,12 +86,18 @@ body {
   gap: 1rem;
 }
 
-.app-header {
-  padding: 1.2rem 1.4rem;
-  border: 1px solid var(--line);
-  background: linear-gradient(160deg, rgba(12, 4, 22, 0.95), rgba(12, 4, 22, 0.85));
-  border-radius: 18px;
+/* Nowy wyśrodkowany, wolny nagłówek bez okienka backgroundu */
+.app-header-centered {
+  text-align: center;
+  padding: 2rem 1rem 1rem 1rem;
   animation: fadeInUp 0.5s ease;
+}
+
+.app-header-centered h1 {
+  margin: 0.3rem 0;
+  font-family: "Bree Serif", serif;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .eyebrow {
@@ -142,10 +148,61 @@ h1 {
   gap: 1rem;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.8rem;
+/* Węższe, wyśrodkowane okienko menu głównego */
+.join-panel-reimagined {
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.8rem;
+  border-color: var(--line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Dopasowanie szerokości panelu lobby do szerokości menu głównego */
+#lobbyPanel {
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Segmenty ułożone jeden pod drugim */
+.join-segment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.join-segment label {
+  font-weight: 600;
+  color: var(--gold);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Układ input + przycisk akcji w jednej linii wewnątrz segmentu */
+.input-with-action {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-with-action input {
+  flex: 1;
+}
+
+.full-width {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.target-center {
+  align-items: center;
+  margin-top: 0.5rem;
 }
 
 label {
@@ -395,8 +452,6 @@ select {
   font-size: 0.86rem;
   font-weight: 600;
   overflow: visible;
-}
-.card {
   position: relative;
 }
 
@@ -404,7 +459,6 @@ select {
   background: transparent;
 }
 
-/* Key icon next to player name */
 .player-key {
   width: 28px;
   height: 28px;
@@ -414,7 +468,6 @@ select {
   box-shadow: 0 2px 6px rgba(0,0,0,0.35);
 }
 
-/* Flying key used for transfer animation */
 .key-fly {
   position: fixed;
   width: 48px;
@@ -427,12 +480,11 @@ select {
   will-change: transform, opacity;
 }
 
-/* Key displayed among player's cards */
 .card.key-card {
   display: grid;
   place-items: center;
   background: transparent;
-  margin-left: 2rem; /* small gap between playing cards and key */
+  margin-left: 2rem;
 }
 
 .card-key-img {
@@ -471,29 +523,30 @@ select {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.22);
 }
 
-/* Card flip styles */
 .card-inner {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
   transition: transform 700ms cubic-bezier(.2,.9,.2,1);
-  display: grid; /* use grid so faces can stack but still contribute to layout */
+  display: grid;
 }
+
 .card-face {
-  grid-area: 1 / 1 / 2 / 2; /* stack faces in same cell */
+  grid-area: 1 / 1 / 2 / 2;
   backface-visibility: hidden;
   display: grid;
   place-items: center;
 }
+
 .card-face.back {
   transform: rotateY(180deg);
 }
+
 .card.is-revealed {
   z-index: 6;
 }
 
 .card.is-revealed .card-inner {
-  /* rotate and lift slightly up while flipping */
   transform: rotateY(180deg) translateY(-15px);
 }
 
@@ -502,7 +555,6 @@ select {
   box-shadow: 0 12px 24px rgba(0,0,0,0.32);
 }
 
-/* ensure back (hidden side) uses the same image sizing */
 .card-face img {
   width: auto;
   height: 150px;
@@ -532,15 +584,9 @@ button.card {
 }
 
 @keyframes cardSlideUp {
-  0% {
-    transform: translateY(0);
-  }
-  70% {
-    transform: translateY(-10px);
-  }
-  100% {
-    transform: translateY(-8px);
-  }
+  0% { transform: translateY(0); }
+  70% { transform: translateY(-10px); }
+  100% { transform: translateY(-8px); }
 }
 
 .player-actions {
@@ -686,7 +732,7 @@ body.game-mode .app-shell {
   gap: 0;
 }
 
-body.game-mode .app-header,
+body.game-mode .app-header-centered,
 body.game-mode #joinPanel,
 body.game-mode #lobbyPanel,
 body.game-mode #configWarning,
@@ -745,7 +791,7 @@ body.game-mode .table-players {
     padding: 0.75rem;
   }
 }
-/* 🔵 Ikonka instrukcji */
+
 .instruction-btn {
   position: fixed;
   top: 1rem;
@@ -762,11 +808,10 @@ body.game-mode .table-players {
   cursor: pointer;
 }
 
-/* 🔵 Modal instrukcji – NAJWYŻSZA WARSTWA */
 .instruction-modal {
   position: fixed;
   inset: 0;
-  z-index: 99999; /* wyżej niż wszystkie inne modale */
+  z-index: 99999;
   background: rgba(12, 4, 22, 0.82);
   display: grid;
   place-items: center;
