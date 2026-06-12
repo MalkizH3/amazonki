@@ -853,6 +853,32 @@ function renderPanels() {
   );
 }
 
+function computeRoleRange(playerCount) {
+  const pool = TEAM_POOL_DISTRIBUTION[playerCount];
+  if (!pool) return null;
+
+  const A = pool.amazons;
+  const R = pool.raiders;
+  const P = A + R; // łączna pula ról
+  const N = playerCount;
+
+  // ile ról trzeba odrzucić, jeśli pula > liczba graczy
+  const drop = Math.max(0, P - N);
+
+  // minimalna liczba amazonek = A - drop (ale nie mniej niż 0)
+  const minA = Math.max(0, A - drop);
+
+  // maksymalna liczba amazonek = nie więcej niż A i nie więcej niż N
+  const maxA = Math.min(A, N);
+
+  // grabieżcy to reszta
+  const minR = N - maxA;
+  const maxR = N - minA;
+
+  return { minA, maxA, minR, maxR };
+}
+
+
 function renderLobby() {
   if (!state.room || !state.roomId) {
     return;

@@ -16,6 +16,44 @@
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
 
+    <!-- 🔵 IKONKA INSTRUKCJI -->
+    <button id="instructionBtn" class="instruction-btn">i</button>
+
+    <!-- 🔵 MODAL INSTRUKCJI -->
+    <section id="instructionModal" class="instruction-modal hidden">
+      <div class="instruction-card">
+        <h2>Instrukcja gry Amazonki</h2>
+
+        <h3>Cel gry</h3>
+        <p>
+          Gracze dzielą się na dwie drużyny: <strong>Amazonki</strong> oraz <strong>Grabieżcy</strong>.
+        </p>
+        <ul>
+          <li>Amazonki wygrywają, jeśli odkryte zostaną wszystkie <strong>pułapki</strong> lub miną <strong>4</strong> rundy.</li>
+          <li>Grabieżcy wygrywają, jeśli odkryte zostaną wszystkie <strong>skarby</strong>.</li>
+        </ul>
+
+        <h3>Typy kart</h3>
+        <div class="instr-img-row">
+          <div><img src="images/ukryty.png" /><p>Zakryta</p></div>
+          <div><img src="images/skarb.png" /><p>Skarb</p></div>
+          <div><img src="images/pulapka.png" /><p>Pułapka</p></div>
+          <div><img src="images/pusty.png" /><p>Pusty</p></div>
+          <div><img src="images/klucz.png" /><p>Klucz</p></div>
+        </div>
+
+        <h3>Przebieg rozgrywki</h3>
+        <p>Losowy gracz otrzymuje Klucz. Posiadacz klucza wybiera i klika jedną zakrytą kartę u dowolnego innego gracza. Wybrana karta zostaje odkryta dla wszystkich, a gracz, do którego należała ta karta, otrzymuje klucz i wykonuje kolejny ruch.</p>
+
+        <h3>Koniec rundy</h3>
+        <p>Runda kończy się, gdy gracze odkryją tyle kart, ilu jest uczestników w grze. Wtedy nieodkryte karty są zbierane, ponownie tasowane i rozdawane na nowo (Karta klucza zostaje u tego gracza, który ją ostatnio otrzymał). Rozgrywka trwa maksymalnie 4 rundy.</p>
+
+        <div class="button-row">
+          <button id="instructionCloseBtn" class="btn primary">Zamknij</button>
+        </div>
+      </div>
+    </section>
+
     <main class="app-shell">
       <header class="app-header">
         <p class="eyebrow">Gra dedukcyjna online</p>
@@ -140,5 +178,6 @@
     </main>
 
     <script type="module" src="app.js"></script>
+    <script src="instructions.js"></script>
   </body>
 </html>
