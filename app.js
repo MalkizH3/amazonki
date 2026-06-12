@@ -1200,6 +1200,9 @@ function renderPlayerPanels() {
   const cards = Array.isArray(state.room?.cards) ? state.room.cards : [];
   const myId = state.user?.uid;
   const currentKeyHolder = state.room?.currentKeyHolder || null;
+  
+  // Sprawdzamy, czy gra została zakończona
+  const isGameFinished = state.room?.status === "finished";
 
   state.players.forEach((player) => {
     const panel = document.createElement("article");
@@ -1209,13 +1212,16 @@ function renderPlayerPanels() {
     const playerCards = cards.filter((card) => card.ownerId === player.id && !card.removed);
     const summary = getCardSummary(playerCards);
     const isMe = player.id === myId;
-    const teamClass = isMe ? getPanelTeamClass(player.team) : "pending";
-    const teamLabel = isMe ? getTeamLabel(player.team) : "";
+    
+    // ZMIANA: Jeśli gra jest zakończona LUB to jestem ja, pokazujemy prawdziwą drużynę gracza
+    const showTeam = isMe || isGameFinished;
+    const teamClass = showTeam ? getPanelTeamClass(player.team) : "pending";
+    const teamLabel = showTeam ? getTeamLabel(player.team) : "";
 
     panel.innerHTML = `
       <div class="player-panel-head">
-        <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}</h3>
-        ${isMe ? `<span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>` : ""}
+        <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}${isMe ? " (Ty)" : ""}</h3>
+        ${showTeam ? `<span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>` : ""}
       </div>
       <div class="player-cards"></div>
       <div class="player-actions"></div>
@@ -1225,63 +1231,35 @@ function renderPlayerPanels() {
 
     // If player holds the key, add key card into the same cards area
     const holdsKey = currentKeyHolder === player.id;
-
     if (playerCards.length === 0 && !holdsKey) {
       const emptyCard = document.createElement("div");
       emptyCard.className = "card back";
       emptyCard.textContent = "Brak kart";
       cardsWrap.appendChild(emptyCard);
     } else {
+      const canReveal = !isMe && currentKeyHolder === myId && state.room?.status === "playing" && !state.room?.awaitingNextRound && !state.room?.awaitingGameEnd;
+
       playerCards.forEach((card) => {
-        const canReveal =
-          state.room.status === "playing" &&
-          !state.room.awaitingNextRound &&
-          !state.room.awaitingGameEnd &&
-          state.room.currentKeyHolder === myId &&
-          player.id !== myId &&
-          !card.revealed;
-
-        const cardEl = document.createElement(canReveal ? "button" : "div");
-        if (canReveal) {
-          cardEl.type = "button";
-        }
-
-        // base card class
+        const cardEl = document.createElement("div");
         cardEl.className = "card";
+        cardEl.dataset.cardId = card.id;
 
-        // build inner faces: front (back of card) and back (face of card)
-        const frontImgPath = getCardImagePath("hidden");
-        const backImgPath = getCardImagePath(card.type);
-
-        const inner = document.createElement("div");
-        inner.className = "card-inner";
-
-        const faceFront = document.createElement("div");
-        faceFront.className = "card-face front";
-        const imgFront = document.createElement("img");
-        imgFront.className = "card-image";
-        imgFront.src = frontImgPath;
-        imgFront.alt = "Ukryta karta";
-        faceFront.appendChild(imgFront);
-
-        const faceBack = document.createElement("div");
-        faceBack.className = "card-face back";
-        const imgBack = document.createElement("img");
-        imgBack.className = "card-image";
-        imgBack.src = backImgPath;
-        imgBack.alt = cardTypeLabel(card.type);
-        faceBack.appendChild(imgBack);
-
-        inner.appendChild(faceFront);
-        inner.appendChild(faceBack);
-        cardEl.appendChild(inner);
-
-        // If the card is already revealed and we've already animated it before, ensure it's rendered revealed
-        if (card.revealed && state.animatedCardIds.has(card.id)) {
+        if (card.revealed) {
           cardEl.classList.add("is-revealed");
         }
 
-        // If card is newly revealed (not seen before), trigger flip animation
+        cardEl.innerHTML = `
+          <div class="card-inner">
+            <div class="card-front">
+              <img class="card-image" src="${getCardImagePath(card.type)}" alt="${escapeHtml(cardTypeLabel(card.type))}" />
+            </div>
+            <div class="card-back">
+              <img class="card-image" src="${CARD_IMAGES.hidden}" alt="Zakryta" />
+            </div>
+          </div>
+        `;
+
+        // (not seen before), trigger flip animation
         if (card.revealed && !state.animatedCardIds.has(card.id)) {
           // Append without revealed class, then flip on next frame
           cardsWrap.appendChild(cardEl);
@@ -1329,25 +1307,25 @@ function renderPlayerPanels() {
     els.tablePlayers.appendChild(panel);
   });
 
-    // Animate key transfer when holder changes. Prefer pendingKeyFromRect (captured on click), fallback to prevKeyRect
-    if (lastKeyHolder !== currentKeyHolder) {
-      try {
-        const fromRect = pendingKeyFromRect || prevKeyRect;
-        if (fromRect && currentKeyHolder) {
-          const toEl = els.tablePlayers.querySelector(`[data-player-id="${currentKeyHolder}"] .player-cards .key-card`) || els.tablePlayers.querySelector(`[data-player-id="${currentKeyHolder}"] .player-panel-head`);
-          if (toEl) {
-            const r = toEl.getBoundingClientRect();
-            const toRect = { left: r.left, top: r.top, width: r.width, height: r.height };
-            animateKeyTransferRects(fromRect, toRect, toEl);
-          }
+  // Animate key transfer when holder changes. Prefer pendingKeyFromRect (captured on click), fallback to prevKeyRect
+  if (lastKeyHolder !== currentKeyHolder) {
+    try {
+      const fromRect = pendingKeyFromRect || prevKeyRect;
+      if (fromRect && currentKeyHolder) {
+        const toEl = els.tablePlayers.querySelector(`[data-player-id="${currentKeyHolder}"] .player-cards .key-card`) || els.tablePlayers.querySelector(`[data-player-id="${currentKeyHolder}"] .player-panel-head`);
+        if (toEl) {
+          const r = toEl.getBoundingClientRect();
+          const toRect = { left: r.left, top: r.top, width: r.width, height: r.height };
+          animateKeyTransferRects(fromRect, toRect, toEl);
         }
-      } catch (e) {
-        console.warn("Key transfer animation failed:", e);
       }
-
-      pendingKeyFromRect = null;
-      lastKeyHolder = currentKeyHolder;
+    } catch (e) {
+      // ignore animation errors
     }
+  }
+
+  lastKeyHolder = currentKeyHolder;
+  pendingKeyFromRect = null;
 }
 
 function cardTypeLabel(type) {
