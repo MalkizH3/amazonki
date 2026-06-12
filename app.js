@@ -57,8 +57,8 @@ const TEAM_POOL_DISTRIBUTION = {
 const CARD_IMAGES = {
   hidden: "images/ukryty.png",
   empty: "images/pusty.png",
-  treasure: "images/skarb.png",
-  trap: "images/pulapka.png",
+  treasure: "images/skarb_2.png",
+  trap: "images/pulapka_2.png",
 };
 
 const MAX_ROUNDS = 4;
