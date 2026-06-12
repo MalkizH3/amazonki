@@ -940,6 +940,23 @@ function renderGame() {
   els.trapValue.textContent = `${room.revealedTraps || 0} / ${deckStats.trap || 0}`;
   els.keyHolderValue.textContent = keyHolder ? keyHolder.name : "-";
 
+  // 🔵 Zakres możliwej liczby Amazonek
+const roleRange = computeRoleRange(state.players.length);
+if (roleRange) {
+  const { minA, maxA } = roleRange;
+
+  let text;
+  if (minA === maxA) {
+    text = `${minA}`;
+  } else {
+    text = `${minA} lub ${maxA}`;
+  }
+
+  const el = document.getElementById("amazonRangeValue");
+  if (el) el.textContent = text;
+}
+
+
   const myTurn = room.currentKeyHolder === state.user?.uid && room.status === "playing";
   const awaitingNextRound = Boolean(room.awaitingNextRound);
   const awaitingGameEnd = Boolean(room.awaitingGameEnd);
