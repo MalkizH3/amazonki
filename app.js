@@ -1208,18 +1208,24 @@ function renderPlayerPanels() {
 
     const playerCards = cards.filter((card) => card.ownerId === player.id && !card.removed);
     const summary = getCardSummary(playerCards);
+    
+    // --- KLUCZOWA ZMIANA PONIŻEJ ---
     const isMe = player.id === myId;
-    const teamClass = isMe ? getPanelTeamClass(player.team) : "pending";
-    const teamLabel = isMe ? getTeamLabel(player.team) : "";
+    // Sprawdzaj też, czy jest ustawiony winner (od razu na koniec rozgrywki)
+    const showTeam = isMe || state.room?.status === "finished" || Boolean(state.room?.winner);
+
+    const teamClass = showTeam ? getPanelTeamClass(player.team) : "pending";
+    const teamLabel = showTeam ? getTeamLabel(player.team) : "";
 
     panel.innerHTML = `
       <div class="player-panel-head">
         <h3 class="player-name ${teamClass}">${escapeHtml(player.name || "Bez nazwy")}</h3>
-        ${isMe ? `<span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>` : ""}
+        ${showTeam ? `<span class="tag ${teamClass}">${escapeHtml(teamLabel)}</span>` : ""}
       </div>
       <div class="player-cards"></div>
       <div class="player-actions"></div>
     `;
+    // --- KONIEC ZMIANY ---
 
     const cardsWrap = panel.querySelector(".player-cards");
 
