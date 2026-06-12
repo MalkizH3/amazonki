@@ -915,7 +915,6 @@ function renderLobby() {
     row.innerHTML = `
       <strong>${escapeHtml(player.name || "Bez nazwy")}${isMe ? " (Ty)" : ""}</strong>
       <span class="player-tags">
-        <span class="tag ${visibleTeam.className}">${visibleTeam.label}</span>
         ${isHostPlayer ? '<span class="tag">Host</span>' : ""}
       </span>
     `;
